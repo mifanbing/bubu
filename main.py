@@ -1,8 +1,8 @@
 import cv2
-import math
+import Util
 import numpy as np
 
-inputImage = cv2.imread("yier.jpeg")
+inputImage = cv2.imread("yier2.png")
 canny_low = 100
 canny_high = 200
     
@@ -18,10 +18,27 @@ edges = cv2.erode(edges, None)
 # the first child contour 
 # the parent contour,
 
-_, inputContours, hierarchy = cv2.findContours(edges, cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)
+_, inputContours, hierarchy = cv2.findContours(edges, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
 
-#print(hierarchy)
-  
+hierarchy = hierarchy[0]
+# for i in range(len(hierarchy)):
+#     print(i)
+#     print(hierarchy[i])
+
+allParents = Util.findAllParents(hierarchy)
+largestParentIndex = -1
+maxArea = -1
+
+print(allParents)
+
+for i in range(len(allParents)):
+      contour = inputContours[allParents[i]][:, 0, :]
+      area = cv2.contourArea(contour) 
+      
+      if area > maxArea:
+          largestParentIndex = allParents[i]
+          maxArea = area
+
 inputHeight = len(inputImage)
 inputWidth = len(inputImage[0])
 workImage = np.zeros((inputHeight, inputWidth, 3), dtype = np.uint8)
@@ -29,43 +46,50 @@ for h in range(inputHeight):
     for w in range(inputWidth):
         workImage[h, w] = (255, 255, 255)
         
-
-# Assume head is biggest contour
-
 goodContours = []
-for contour in inputContours:
-    area = cv2.contourArea(contour[:, 0, :])
+goodContours.append(inputContours[largestParentIndex][:, 0, :])
 
-    if area < 20:
+for index in range(len(hierarchy)):
+    contour = inputContours[index][:, 0, :]
+    area = cv2.contourArea(contour)
+    if area < 40:
         continue
     
-    # for point in contour[:, 0, :]:
-    #     ww, hh = point
-    #     workImage[hh, ww] = (0, 0, 255)
+    nextSibling, prevSibling, firstChild, parent = hierarchy[index]
+    if parent == largestParentIndex:
+        if len(goodContours) == 0:
+            goodContours.append(contour)
+            continue
     
-    if len(goodContours) == 0:
-        goodContours.append(contour[:, 0, :])
-        continue
-    
-    if area < cv2.contourArea(goodContours[-1]):
-        goodContours.append(contour[:, 0, :])
-        continue    
-    
-    for i in range(len(goodContours)):
-        if area > cv2.contourArea(goodContours[i]):
-            goodContours.insert(i, contour[:, 0, :])
-            break
+        if area < cv2.contourArea(goodContours[-1]):
+            goodContours.append(contour)
+            continue    
         
-# head
-for point in goodContours[14]:
-    ww, hh = point
-    workImage[hh, ww] = (0, 0, 255)
+        for i in range(len(goodContours)):
+            if area > cv2.contourArea(goodContours[i]):
+                goodContours.insert(i, contour)
+                break
+    
+#for contour in goodContours:
+#    for point in contour:
+#        ww, hh = point
+#        workImage[hh, ww] = (0, 0, 255) # b g r
 
+# for point in inputContours[0][:, 0, :]: #24 25 31 33 34 36
+#     ww, hh = point
+#     workImage[hh, ww] = (0, 0, 255) # b g r
+    
+# for point in inputContours[2][:, 0, :]: #24 25 29 31 33 34 36
+#     ww, hh = point
+#     workImage[hh, ww] = (0, 255, 0) # b g r
 
-
+# for point in inputContours[36][:, 0, :]: #24 25 29 31 33 34 36
+#     ww, hh = point
+#     workImage[hh, ww] = (255, 0, 0) # b g r
+    
 hMin = inputHeight
 hMax = -1
-for point in goodContours[14]:
+for point in goodContours[0]:
     ww, hh = point
     if hh < hMin:
         hMin = hh
@@ -76,7 +100,7 @@ for h in range(hMin, hMax):
     wMin = inputWidth
     wMax = -1
     
-    for point in goodContours[14]:
+    for point in goodContours[0]:
         w, hTemp = point
         if abs(hTemp - h) < 3:
             if w < wMin:
@@ -85,14 +109,17 @@ for h in range(hMin, hMax):
                 wMax = w
                 
     for w in range(wMin, wMax):
+        containResult = cv2.pointPolygonTest(goodContours[0], (w, h), False) 
+        if containResult == -1:
+            continue
+        
         color = inputImage[h, w]
-        if color[0] > 240 and color[1] > 240 and color[2] > 240:
-            workImage[h, w] = (140, 166, 220)
+        if Util.isYiErBody(color):
+            workImage[h, w] = Util.BUBUBODY
+        elif Util.isYiErCheek(color):
+            workImage[h, w] = Util.BUBUCHEEK          
         else:
             workImage[h, w] = inputImage[h, w]
-            
-#5: left eye
-#7: right eye    
 
 cv2.imshow('', workImage)
 cv2.waitKey(0)

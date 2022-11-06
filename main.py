@@ -111,14 +111,22 @@ for point in goodContours[0]:
     
     for wLayer in range(w - thickness, w + thickness):
         for hLayer in range(h - thickness, h + thickness):
-            if abs(wLayer - w) > 3 or abs(hLayer - h) > 3: 
-                containResult = cv2.pointPolygonTest(goodContours[0], (wLayer, hLayer), False)
-                
-                if containResult == 1:
-                    workImage[hLayer, wLayer] = Util.BUBUBODY
-                    earContour.append((hLayer, wLayer))
+            containResult = cv2.pointPolygonTest(goodContours[0], (wLayer, hLayer), False)
+            
+            if containResult == 1:
+                workImage[hLayer, wLayer] = Util.BUBUBODY
+                earContour.append((hLayer, wLayer))
     
-
+thickness2 = 2
+for point in goodContours[0]:
+    w, h = point
+    
+    for wLayer in range(w - thickness2, w + thickness2):
+        for hLayer in range(h - thickness2, h + thickness2):
+            containResult = cv2.pointPolygonTest(goodContours[0], (wLayer, hLayer), False)
+            
+            if containResult == 1:
+                workImage[hLayer, wLayer] = (0, 0, 0)
   
 hMin = inputHeight
 hMax = -1

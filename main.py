@@ -2,7 +2,25 @@ import cv2
 import Util
 import numpy as np
 
-inputImage = cv2.imread("yier2.png")
+inputImage = cv2.imread("yier3.png")
+inputHeight = len(inputImage)
+inputWidth = len(inputImage[0])
+
+wMin = inputWidth
+wMax = -1
+# draw black line
+for w in range(inputWidth):
+    if inputImage[inputHeight - 1, w][0] < 100 and inputImage[inputHeight - 1, w][1] < 100 and inputImage[inputHeight - 1, w][2] < 100:
+        if w < wMin:
+            wMin = w
+        if w > wMax:
+            wMax = w
+                
+if wMax != -1:           
+    for w in range(wMin, wMax + 1):
+        inputImage[inputHeight - 1, w] = inputImage[inputHeight - 1, wMax]
+
+#inputImage = cv2.resize(inputImage, (276, 200))
 canny_low = 100
 canny_high = 200
     
@@ -39,8 +57,6 @@ for i in range(len(allParents)):
           largestParentIndex = allParents[i]
           maxArea = area
 
-inputHeight = len(inputImage)
-inputWidth = len(inputImage[0])
 workImage = np.zeros((inputHeight, inputWidth, 3), dtype = np.uint8)
 for h in range(inputHeight):
     for w in range(inputWidth):
@@ -86,7 +102,24 @@ for index in range(len(hierarchy)):
 # for point in inputContours[36][:, 0, :]: #24 25 29 31 33 34 36
 #     ww, hh = point
 #     workImage[hh, ww] = (255, 0, 0) # b g r
+  
+# draw a layer of brown inside the contour
+earContour = []
+thickness = 5
+for point in goodContours[0]:
+    w, h = point
     
+    for wLayer in range(w - thickness, w + thickness):
+        for hLayer in range(h - thickness, h + thickness):
+            if abs(wLayer - w) > 3 or abs(hLayer - h) > 3: 
+                containResult = cv2.pointPolygonTest(goodContours[0], (wLayer, hLayer), False)
+                
+                if containResult == 1:
+                    workImage[hLayer, wLayer] = Util.BUBUBODY
+                    earContour.append((hLayer, wLayer))
+    
+
+  
 hMin = inputHeight
 hMax = -1
 for point in goodContours[0]:
@@ -119,7 +152,19 @@ for h in range(hMin, hMax):
         elif Util.isYiErCheek(color):
             workImage[h, w] = Util.BUBUCHEEK          
         else:
-            workImage[h, w] = inputImage[h, w]
+            if (h, w) in earContour:
+                continue
+            else:
+                workImage[h, w] = inputImage[h, w]
 
 cv2.imshow('', workImage)
 cv2.waitKey(0)
+
+
+
+
+
+
+
+
+
